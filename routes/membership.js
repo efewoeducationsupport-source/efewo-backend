@@ -1,48 +1,36 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
 const { pool } = require('../db');
 const router = express.Router();
 
-// Multer config — save passport photos to /uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'passport-' + unique + path.extname(file.originalname));
-  }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
-  fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png/;
-    cb(null, allowed.test(path.extname(file.originalname).toLowerCase()));
-  }
-});
-
-// Submit membership form (only after verified payment)
-router.post('/submit', upload.single('passport_photo'), async (req, res) => {
+// Submit school registration form (only after verified payment)
+router.post('/submit', async (req, res) => {
   const {
     payment_reference,
-    full_name,
-    email,
-    phone,
-    date_of_birth,
-    gender,
-    occupation,
-    residential_address,
-    state_of_origin,
+    school_name,
+    school_address,
+    year_established,
+    nature_of_school,
     lga,
-    membership_track,
-    next_of_kin_name,
-    next_of_kin_phone,
-    next_of_kin_relationship,
-    means_of_id
+    state,
+    email,
+    whatsapp,
+    proprietor_name,
+    proprietor_phone,
+    // Nursery
+    kg1_m, kg1_f, kg2_m, kg2_f,
+    n1_m, n1_f, n2_m, n2_f, n3_m, n3_f,
+    // Primary
+    p1_m, p1_f, p2_m, p2_f, p3_m, p3_f,
+    p4_m, p4_f, p5_m, p5_f, p6_m, p6_f,
+    // Secondary
+    jss1_m, jss1_f, jss2_m, jss2_f, jss3_m, jss3_f,
+    ss1_m, ss1_f, ss2_m, ss2_f, ss3_m, ss3_f,
+    // Professional reg
+    reg_cac, reg_state, reg_napps
   } = req.body;
 
   // Validate required fields
-  if (!payment_reference || !full_name || !email || !phone || !residential_address || !membership_track) {
+  if (!payment_reference || !school_name || !school_address || !email || !proprietor_name || !proprietor_phone) {
     return res.status(400).json({ success: false, message: 'Required fields missing' });
   }
 
@@ -73,27 +61,36 @@ router.post('/submit', upload.single('passport_photo'), async (req, res) => {
       });
     }
 
-    const passport_photo_url = req.file ? `/uploads/${req.file.filename}` : null;
-
     const result = await pool.query(
       `INSERT INTO membership_forms 
-        (payment_reference, full_name, email, phone, date_of_birth, gender, occupation,
-         residential_address, state_of_origin, lga, membership_track,
-         next_of_kin_name, next_of_kin_phone, next_of_kin_relationship,
-         passport_photo_url, means_of_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        (payment_reference, school_name, school_address, year_established, nature_of_school,
+         lga, state, email, whatsapp, proprietor_name, proprietor_phone,
+         kg1_m, kg1_f, kg2_m, kg2_f, n1_m, n1_f, n2_m, n2_f, n3_m, n3_f,
+         p1_m, p1_f, p2_m, p2_f, p3_m, p3_f, p4_m, p4_f, p5_m, p5_f, p6_m, p6_f,
+         jss1_m, jss1_f, jss2_m, jss2_f, jss3_m, jss3_f,
+         ss1_m, ss1_f, ss2_m, ss2_f, ss3_m, ss3_f,
+         reg_cac, reg_state, reg_napps)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+               $12,$13,$14,$15,$16,$17,$18,$19,$20,$21,
+               $22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,
+               $34,$35,$36,$37,$38,$39,
+               $40,$41,$42,$43,$44,$45,
+               $46,$47,$48)
        RETURNING id`,
       [
-        payment_reference, full_name, email, phone, date_of_birth || null,
-        gender, occupation, residential_address, state_of_origin, lga,
-        membership_track, next_of_kin_name, next_of_kin_phone,
-        next_of_kin_relationship, passport_photo_url, means_of_id
+        payment_reference, school_name, school_address, year_established, nature_of_school,
+        lga, state, email, whatsapp, proprietor_name, proprietor_phone,
+        kg1_m||0, kg1_f||0, kg2_m||0, kg2_f||0, n1_m||0, n1_f||0, n2_m||0, n2_f||0, n3_m||0, n3_f||0,
+        p1_m||0, p1_f||0, p2_m||0, p2_f||0, p3_m||0, p3_f||0, p4_m||0, p4_f||0, p5_m||0, p5_f||0, p6_m||0, p6_f||0,
+        jss1_m||0, jss1_f||0, jss2_m||0, jss2_f||0, jss3_m||0, jss3_f||0,
+        ss1_m||0, ss1_f||0, ss2_m||0, ss2_f||0, ss3_m||0, ss3_f||0,
+        reg_cac||false, reg_state||false, reg_napps||false
       ]
     );
 
     return res.json({
       success: true,
-      message: 'Membership form submitted successfully',
+      message: 'School registration form submitted successfully',
       form_id: result.rows[0].id
     });
 
@@ -103,13 +100,12 @@ router.post('/submit', upload.single('passport_photo'), async (req, res) => {
   }
 });
 
-// GET all submitted forms (admin only — protect with admin key header)
+// GET all submitted forms (admin only)
 router.get('/all', async (req, res) => {
   const adminKey = req.headers['x-admin-key'];
   if (adminKey !== process.env.ADMIN_SECRET_KEY) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-
   try {
     const result = await pool.query(
       `SELECT mf.*, p.payment_type, p.amount, p.created_at as payment_date
@@ -129,14 +125,12 @@ router.get('/stats', async (req, res) => {
   if (adminKey !== process.env.ADMIN_SECRET_KEY) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-
   try {
     const [forms, payments, dues] = await Promise.all([
       pool.query("SELECT COUNT(*) FROM membership_forms"),
       pool.query("SELECT COUNT(*), SUM(amount) FROM payments WHERE status = 'success'"),
       pool.query("SELECT COUNT(*) FROM yearly_dues WHERE year = EXTRACT(YEAR FROM NOW())")
     ]);
-
     return res.json({
       success: true,
       stats: {
@@ -151,18 +145,16 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// UPDATE form status (admin approve/reject)
+// UPDATE form status (admin)
 router.patch('/:id/status', async (req, res) => {
   const adminKey = req.headers['x-admin-key'];
   if (adminKey !== process.env.ADMIN_SECRET_KEY) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-
   const { status } = req.body;
   if (!['pending', 'approved', 'rejected'].includes(status)) {
     return res.status(400).json({ success: false, message: 'Invalid status' });
   }
-
   try {
     await pool.query('UPDATE membership_forms SET status = $1 WHERE id = $2', [status, req.params.id]);
     return res.json({ success: true, message: `Form ${status}` });
