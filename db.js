@@ -79,6 +79,23 @@ const initDB = async () => {
       `).catch(() => {}); // ignore if already exists
     }
 
+    // Drop foreign key constraint on payment_reference if it exists
+    await client.query(`
+      DO $$
+      DECLARE
+        r RECORD;
+      BEGIN
+        FOR r IN (
+          SELECT constraint_name 
+          FROM information_schema.table_constraints 
+          WHERE table_name = 'membership_forms' 
+          AND constraint_type = 'FOREIGN KEY'
+        ) LOOP
+          EXECUTE 'ALTER TABLE membership_forms DROP CONSTRAINT IF EXISTS ' || r.constraint_name;
+        END LOOP;
+      END $$;
+    `).catch(() => {});
+
     console.log('✅ Database tables initialized');
   } finally {
     client.release();
