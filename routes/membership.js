@@ -19,14 +19,16 @@ router.post('/submit', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Required fields missing' });
   }
 
-  // Determine payment status — if a valid paid reference exists, mark as paid
+  // Determine payment status
   let payment_status = 'unpaid';
-  if (payment_reference && !payment_reference.startsWith('WALK-IN-')) {
-    const payCheck = await pool.query(
-      "SELECT id FROM payments WHERE reference = $1 AND status = 'success'",
-      [payment_reference]
-    ).catch(() => ({ rows: [] }));
-    if (payCheck.rows.length > 0) payment_status = 'paid';
+  if (payment_reference && !payment_reference.startsWith('WALK-IN-') && payment_reference.trim() !== '') {
+    try {
+      const payCheck = await pool.query(
+        "SELECT id FROM payments WHERE reference = $1 AND status = 'success'",
+        [payment_reference]
+      );
+      if (payCheck.rows.length > 0) payment_status = 'paid';
+    } catch(e) {}
   }
 
   try {
