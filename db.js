@@ -70,6 +70,7 @@ const initDB = async () => {
       ['reg_cac', 'BOOLEAN DEFAULT false'],
       ['reg_state', 'BOOLEAN DEFAULT false'],
       ['reg_napps', 'BOOLEAN DEFAULT false'],
+      ['payment_status', "VARCHAR(20) DEFAULT 'unpaid'"],
     ];
 
     for (const [col, type] of newColumns) {
