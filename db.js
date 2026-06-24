@@ -79,6 +79,14 @@ const initDB = async () => {
       `).catch(() => {}); // ignore if already exists
     }
 
+    // Make old columns nullable (from previous schema)
+    const oldNullableCols = ['full_name', 'phone', 'date_of_birth', 'gender', 'occupation',
+      'residential_address', 'state_of_origin', 'membership_track', 'next_of_kin_name',
+      'next_of_kin_phone', 'next_of_kin_relationship', 'passport_photo_url', 'means_of_id'];
+    for (const col of oldNullableCols) {
+      await client.query(`ALTER TABLE membership_forms ALTER COLUMN ${col} DROP NOT NULL`).catch(() => {});
+    }
+
     // Drop foreign key constraint on payment_reference if it exists
     await client.query(`
       DO $$
