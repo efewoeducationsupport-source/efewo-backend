@@ -79,6 +79,15 @@ router.post('/submit', async (req, res) => {
   }
 });
 
+// Quick admin key test
+router.get('/ping', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  const expected = process.env.ADMIN_SECRET_KEY;
+  if (!expected) return res.json({ success: false, message: 'ADMIN_SECRET_KEY not set on server' });
+  if (adminKey === expected) return res.json({ success: true, message: 'Key is correct' });
+  return res.status(401).json({ success: false, message: 'Key does not match' });
+});
+
 // GET all forms (admin)
 router.get('/all', async (req, res) => {
   const adminKey = req.headers['x-admin-key'];
