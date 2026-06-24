@@ -70,7 +70,12 @@ router.post('/submit', async (req, res) => {
 
   } catch (err) {
     console.error('Form submit error:', err);
-    return res.status(500).json({ success: false, message: 'Submission failed. Please try again.' });
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Submission failed.',
+      detail: err.detail || null,
+      code: err.code || null
+    });
   }
 });
 
